@@ -1,5 +1,7 @@
 kali-linux-default
 kali-desktop-xfce
+lightdm
+lightdm-gtk-greeter
 calamares
 calamares-settings-kali
 tor

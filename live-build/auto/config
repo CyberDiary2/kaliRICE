@@ -20,6 +20,12 @@ lb config noauto \
     --iso-volume "darbs" \
     --mirror-bootstrap http://http.kali.org/kali \
     --mirror-chroot http://http.kali.org/kali \
+    --mirror-binary http://http.kali.org/kali \
+    --mirror-binary-security http://http.kali.org/kali \
+    --parent-mirror-bootstrap http://http.kali.org/kali \
+    --parent-mirror-chroot http://http.kali.org/kali \
+    --parent-mirror-binary http://http.kali.org/kali \
+    --parent-mirror-binary-security http://http.kali.org/kali \
     --security false \
     --updates false \
     --source false \

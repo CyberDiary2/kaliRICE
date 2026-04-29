@@ -184,12 +184,64 @@ ok "GTK theme applied"
 
 # ── 8. WALLPAPER (XFCE4) ───────────────────────────────────────────────────────
 info "Setting desktop wallpaper..."
-for mon in LVDS1 LVDS-1 LVDS eDP1 eDP-1 VGA-1 VGA1; do
+
+# write xfce4-desktop.xml directly — covers all monitor names, survives logout
+XFCE_XML_DIR="$CONFIG/xfce4/xfconf/xfce-perchannel-xml"
+mkdir -p "$XFCE_XML_DIR"
+cat > "$XFCE_XML_DIR/xfce4-desktop.xml" << XMLEOF
+<?xml version="1.0" encoding="UTF-8"?>
+<channel name="xfce4-desktop" version="1.0">
+  <property name="backdrop" type="empty">
+    <property name="screen0" type="empty">
+      <property name="monitorLVDS-1" type="empty">
+        <property name="workspace0" type="empty">
+          <property name="color-style" type="int" value="0"/>
+          <property name="image-style" type="int" value="5"/>
+          <property name="last-image" type="string" value="$WALLPAPER"/>
+        </property>
+      </property>
+      <property name="monitorLVDS1" type="empty">
+        <property name="workspace0" type="empty">
+          <property name="color-style" type="int" value="0"/>
+          <property name="image-style" type="int" value="5"/>
+          <property name="last-image" type="string" value="$WALLPAPER"/>
+        </property>
+      </property>
+      <property name="monitoreDP-1" type="empty">
+        <property name="workspace0" type="empty">
+          <property name="color-style" type="int" value="0"/>
+          <property name="image-style" type="int" value="5"/>
+          <property name="last-image" type="string" value="$WALLPAPER"/>
+        </property>
+      </property>
+      <property name="monitoreDP1" type="empty">
+        <property name="workspace0" type="empty">
+          <property name="color-style" type="int" value="0"/>
+          <property name="image-style" type="int" value="5"/>
+          <property name="last-image" type="string" value="$WALLPAPER"/>
+        </property>
+      </property>
+      <property name="monitorVGA-1" type="empty">
+        <property name="workspace0" type="empty">
+          <property name="color-style" type="int" value="0"/>
+          <property name="image-style" type="int" value="5"/>
+          <property name="last-image" type="string" value="$WALLPAPER"/>
+        </property>
+      </property>
+    </property>
+  </property>
+  <property name="single-workspace-mode" type="bool" value="true"/>
+</channel>
+XMLEOF
+ok "xfce4-desktop.xml written for all monitor names"
+
+# also try xfconf-query live if in a session
+for mon in LVDS1 LVDS-1 eDP1 eDP-1 VGA-1 VGA1; do
     xfconf-query -c xfce4-desktop \
         -p "/backdrop/screen0/monitor${mon}/workspace0/last-image" \
-        -s "$WALLPAPER" 2>/dev/null && ok "wallpaper set on $mon" && break
+        -s "$WALLPAPER" 2>/dev/null || true
 done
-xfconf-query -c xfce4-desktop -p /backdrop/single-workspace-mode -s true 2>/dev/null || true
+xfdesktop --reload 2>/dev/null || true
 
 # ── 9. PANEL ───────────────────────────────────────────────────────────────────
 info "Configuring panel..."
@@ -264,14 +316,44 @@ try "update-grub" sudo update-grub
 
 # ── 14. REMOVE KALI BRANDING ───────────────────────────────────────────────────
 info "Removing Kali branding..."
+
+# remove kali wallpaper packages
 sudo apt-get remove -y \
     kali-wallpapers-legacy kali-wallpapers-2019 kali-wallpapers-2020 \
     kali-wallpapers-2021 kali-wallpapers-2022 kali-wallpapers-2023 \
     kali-wallpapers-2024 2>/dev/null || true
 sudo apt-get autoremove -y 2>/dev/null || true
+
+# remove kali logo/dragon assets
 sudo rm -f /usr/share/kali-themes/kali-logo*.png \
            /usr/share/kali-themes/kali-dragon*.svg \
-           /usr/share/pixmaps/kali-logo*.png 2>/dev/null || true
+           /usr/share/kali-themes/kali-dragon*.png \
+           /usr/share/pixmaps/kali-logo*.png \
+           /usr/share/pixmaps/kali-dragon*.png 2>/dev/null || true
+
+# remove kali lightdm override
+sudo rm -f /etc/lightdm/lightdm-gtk-greeter.conf.d/kali.conf 2>/dev/null || true
+
+# patch os-release
+if [ -f /etc/os-release ]; then
+    sudo sed -i 's/^NAME=.*/NAME="darbs"/'                    /etc/os-release
+    sudo sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="darbs"/'      /etc/os-release
+    sudo cp /etc/os-release /usr/lib/os-release 2>/dev/null || true
+    ok "os-release patched"
+fi
+
+# set darbs hostname
+echo "darbs" | sudo tee /etc/hostname > /dev/null
+sudo sed -i "s/kali/darbs/g" /etc/hosts 2>/dev/null || true
+ok "hostname set to darbs"
+
+# whisker menu: replace kali icon with neutral
+WHISKER_ID=$(xfconf-query -c xfce4-panel -p /plugins -l 2>/dev/null | \
+    grep "whiskermenu" | grep -oP 'plugin-\d+' | head -1 | grep -oP '\d+')
+[ -n "$WHISKER_ID" ] && \
+    xfconf-query -c xfce4-panel \
+        -p "/plugins/plugin-${WHISKER_ID}/button-icon" \
+        -s "start-here-symbolic" 2>/dev/null || true
 ok "Kali branding removed"
 
 # ── 15. VSCODIUM ───────────────────────────────────────────────────────────────
@@ -312,7 +394,7 @@ gh_latest() {
 }
 
 # nuclei
-(
+command -v nuclei &>/dev/null && ok "nuclei already installed" || (
     VER=$(gh_latest projectdiscovery/nuclei)
     curl -sL "https://github.com/projectdiscovery/nuclei/releases/download/${VER}/nuclei_${VER#v}_linux_amd64.zip" \
         -o /tmp/nuclei.zip
@@ -322,7 +404,7 @@ gh_latest() {
 ) 2>/dev/null && ok "nuclei" || skip "nuclei" "download failed"
 
 # chisel
-(
+command -v chisel &>/dev/null && ok "chisel already installed" || (
     VER=$(gh_latest jpillora/chisel)
     curl -sL "https://github.com/jpillora/chisel/releases/download/${VER}/chisel_${VER#v}_linux_amd64.gz" \
         -o /tmp/chisel.gz
@@ -332,7 +414,7 @@ gh_latest() {
 ) 2>/dev/null && ok "chisel" || skip "chisel" "download failed"
 
 # ligolo-ng
-(
+command -v ligolo-agent &>/dev/null && ok "ligolo-ng already installed" || (
     VER=$(gh_latest nicocha30/ligolo-ng)
     curl -sL "https://github.com/nicocha30/ligolo-ng/releases/download/${VER}/ligolo-ng_agent_${VER#v}_linux_amd64.tar.gz" \
         -o /tmp/ligolo-agent.tar.gz
@@ -346,7 +428,7 @@ gh_latest() {
 ) 2>/dev/null && ok "ligolo-ng" || skip "ligolo-ng" "download failed"
 
 # caido
-(
+command -v caido &>/dev/null && ok "caido already installed" || (
     VER=$(gh_latest caido/caido)
     [ -z "$VER" ] && exit 1
     curl -sL "https://github.com/caido/caido/releases/download/${VER}/caido-cli-${VER#v}-linux-x86_64.tar.gz" \
@@ -396,7 +478,7 @@ gem install evil-winrm --quiet 2>/dev/null && ok "evil-winrm" || skip "evil-winr
 
 # ── 18. EXTRA APT PACKAGES ─────────────────────────────────────────────────────
 info "Installing extra packages..."
-pkg() { sudo apt-get install -y "$1" 2>/dev/null && ok "$1" || skip "$1" "not available"; }
+pkg() { dpkg -l "$1" &>/dev/null && ok "$1 already installed" && return; sudo apt-get install -y "$1" 2>/dev/null && ok "$1" || skip "$1" "not available"; }
 
 pkg wireshark
 pkg burpsuite
@@ -416,15 +498,6 @@ pkg bleachbit
 pkg libreoffice
 pkg gimp
 pkg docker.io
-
-# ── 19. WHISKER MENU ICON ──────────────────────────────────────────────────────
-info "Cleaning up panel icons..."
-WHISKER_ID=$(xfconf-query -c xfce4-panel -p /plugins -l 2>/dev/null | \
-    grep "whiskermenu" | grep -oP 'plugin-\d+' | head -1 | grep -oP '\d+')
-[ -n "$WHISKER_ID" ] && \
-    xfconf-query -c xfce4-panel \
-        -p "/plugins/plugin-${WHISKER_ID}/button-icon" \
-        -s "start-here-symbolic" 2>/dev/null || true
 
 # ── DONE ───────────────────────────────────────────────────────────────────────
 echo ""

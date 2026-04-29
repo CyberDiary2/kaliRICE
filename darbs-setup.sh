@@ -64,10 +64,10 @@ fi
 command -v papirus-folders &>/dev/null && \
     try "papirus green folders" papirus-folders -C green --theme Papirus-Dark
 
-# generate custom DARBS whisker menu icon (moss green terminal symbol)
+# generate custom DARBS whisker menu icon (forest green D on dark evergreen bg)
 ICON_DIR="/usr/share/pixmaps"
-sudo convert -size 64x64 xc:"#2d353b" \
-    -fill "#a7c080" \
+sudo convert -size 64x64 xc:"#0d1a0d" \
+    -fill "#40a040" \
     -font /usr/share/fonts/opentype/unifont/unifont.otf \
     -pointsize 36 -gravity Center -annotate 0 "D" \
     "$ICON_DIR/darbs-menu.png" 2>/dev/null && ok "darbs menu icon generated" || \
@@ -288,13 +288,25 @@ xfdesktop --reload 2>/dev/null || true
 info "Configuring panel..."
 xfconf-query -c xfce4-panel -p /panels/panel-1/position         -s "p=6;x=0;y=0" 2>/dev/null || true
 xfconf-query -c xfce4-panel -p /panels/panel-1/size             -s 28             2>/dev/null || true
+# background-style 2 = solid color, using dark evergreen #0d1a0d (r=0.051 g=0.102 b=0.051)
 xfconf-query -c xfce4-panel -p /panels/panel-1/background-style -s 2              2>/dev/null || true
 xfconf-query -c xfce4-panel -p /panels/panel-1/background-rgba \
     --create -t double -t double -t double -t double \
-    -s 0.176 -s 0.212 -s 0.231 -s 0.85 2>/dev/null || \
+    -s 0.051 -s 0.102 -s 0.051 -s 0.95 2>/dev/null || \
 xfconf-query -c xfce4-panel -p /panels/panel-1/background-rgba \
-    -s 0.176 -s 0.212 -s 0.231 -s 0.85 2>/dev/null || true
-ok "panel configured"
+    -s 0.051 -s 0.102 -s 0.051 -s 0.95 2>/dev/null || true
+
+# write panel channel XML directly so color persists across sessions
+PANEL_XML="$CONFIG/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml"
+mkdir -p "$(dirname "$PANEL_XML")"
+# only patch the background-rgba if the file already exists (don't stomp plugin layout)
+if [ -f "$PANEL_XML" ]; then
+    sed -i 's|name="background-rgba".*|name="background-rgba" type="array"><value type="double" value="0.051"/><value type="double" value="0.102"/><value type="double" value="0.051"/><value type="double" value="0.95"/>|' "$PANEL_XML" 2>/dev/null || true
+fi
+
+# restart panel to apply color immediately
+xfce4-panel --restart 2>/dev/null || true
+ok "panel configured (dark evergreen)"
 
 # ── 10. FASTFETCH ──────────────────────────────────────────────────────────────
 info "Configuring fastfetch..."
@@ -408,9 +420,81 @@ try "set darbs plymouth theme" sudo plymouth-set-default-theme darbs
 try "update initramfs" sudo update-initramfs -u
 
 # ── 13. GRUB ───────────────────────────────────────────────────────────────────
-info "Configuring GRUB (black, terminal green)..."
+info "Configuring GRUB (DARBS IBM VGA theme)..."
 sudo rm -f /boot/grub/kali-grub.png /boot/grub/kali_background.png 2>/dev/null || true
 sudo rm -rf /boot/grub/themes/kali /usr/share/grub/themes/kali 2>/dev/null || true
+
+GRUB_THEME_DIR="/boot/grub/themes/darbs"
+sudo mkdir -p "$GRUB_THEME_DIR"
+
+# generate IBM VGA-style bitmap font from unifont (16px = classic CGA/VGA char size)
+UNIFONT_OTF="/usr/share/fonts/opentype/unifont/unifont.otf"
+if command -v grub-mkfont &>/dev/null && [ -f "$UNIFONT_OTF" ]; then
+    sudo grub-mkfont -s 16 --name "darbs16" \
+        -o "$GRUB_THEME_DIR/darbs16.pf2" "$UNIFONT_OTF" 2>/dev/null && \
+        ok "GRUB font generated" || skip "GRUB font" "grub-mkfont failed"
+    sudo grub-mkfont -s 24 --name "darbs24" \
+        -o "$GRUB_THEME_DIR/darbs24.pf2" "$UNIFONT_OTF" 2>/dev/null || true
+else
+    skip "GRUB font" "grub-mkfont or unifont.otf not found"
+fi
+
+sudo bash -c "cat > $GRUB_THEME_DIR/theme.txt" << 'THEME'
+# DARBS IBM VGA retro GRUB theme
+title-text: ""
+desktop-color: "#000000"
+
++ label {
+  top = 7%
+  left = 0
+  width = 100%
+  align = "center"
+  font = "darbs24"
+  color = "#33cc33"
+  text = "DARBS"
+}
+
++ label {
+  top = 13%
+  left = 0
+  width = 100%
+  align = "center"
+  font = "darbs16"
+  color = "#1a661a"
+  text = "-- select boot option --"
+}
+
++ boot_menu {
+  left = 15%
+  top = 20%
+  width = 70%
+  height = 58%
+  item_font = "darbs16"
+  item_color = "#33cc33"
+  selected_item_color = "#aaffaa"
+  item_height = 20
+  item_padding = 10
+  item_spacing = 2
+  icon_height = 0
+  icon_width = 0
+  scrollbar = false
+}
+
++ progress_bar {
+  id = "__timeout__"
+  left = 15%
+  top = 83%
+  height = 14
+  width = 70%
+  fg_color = "#33cc33"
+  bg_color = "#001100"
+  border_color = "#1a661a"
+  text_color = "#33cc33"
+  font = "darbs16"
+  text = "@TIMEOUT_NOTIFICATION_LONG@"
+}
+THEME
+ok "GRUB theme written"
 
 sudo bash -c 'cat > /etc/default/grub' << 'EOF'
 GRUB_DEFAULT=0
@@ -421,6 +505,7 @@ GRUB_CMDLINE_LINUX=""
 GRUB_TERMINAL_OUTPUT=gfxterm
 GRUB_GFXMODE=auto
 GRUB_BACKGROUND=""
+GRUB_THEME=/boot/grub/themes/darbs/theme.txt
 GRUB_COLOR_NORMAL="light-green/black"
 GRUB_COLOR_HIGHLIGHT="black/light-green"
 EOF

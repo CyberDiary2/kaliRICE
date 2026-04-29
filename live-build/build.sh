@@ -25,7 +25,7 @@ info "Running lb config..."
 bash auto/config
 
 info "Running lb build (this takes 30-60 minutes)..."
-lb build 2>&1 | tee build.log
+lb build noauto 2>&1 | tee build.log
 
 ISO=$(ls "$SCRIPT_DIR"/*.iso 2>/dev/null | head -1)
 if [ -n "$ISO" ]; then

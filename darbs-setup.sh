@@ -116,6 +116,10 @@ sudo mkdir -p /usr/share/backgrounds/everforest
 # ── 5. XFCE4-TERMINAL ──────────────────────────────────────────────────────────
 info "Configuring xfce4-terminal..."
 mkdir -p "$CONFIG/xfce4/terminal"
+
+# kill any running terminal config daemon so our file takes effect immediately
+pkill -f xfce4-terminal 2>/dev/null || true
+
 cat > "$CONFIG/xfce4/terminal/terminalrc" << 'EOF'
 [Configuration]
 FontName=JetBrains Mono 11
@@ -125,15 +129,24 @@ MiscCursorBlinks=TRUE
 MiscCursorShape=TERMINAL_CURSOR_SHAPE_BLOCK
 MiscDefaultGeometry=100x30
 MiscMenubarDefault=FALSE
+MiscUseShiftArrowsToScroll=FALSE
+MiscSlimTabs=FALSE
+MiscNewTabAdjacent=FALSE
 BackgroundMode=TERMINAL_BACKGROUND_TRANSPARENT
-BackgroundDarkness=0.92
-ColorForeground=#c8c5a8
-ColorBackground=#1a1d16
-ColorCursor=#8aad6a
-ColorCursorForeground=#1a1d16
-ColorBold=#e8e5c8
-ColorPalette=#1a1d16;#cc7a7a;#8aad6a;#c4a882;#5a9090;#9a7aaa;#6aaa8a;#c8c5a8;#3a3d32;#dd9999;#a0c882;#d4b899;#7aaaba;#b099c8;#8abaa0;#e8e5d0
+BackgroundDarkness=0.95
+ColorForeground=#b8ccaa
+ColorBackground=#0d1a0d
+ColorCursor=#40a040
+ColorCursorForeground=#0d1a0d
+ColorBold=#d0e0b8
+ColorUseTheme=FALSE
+ColorPalette=#0d1a0d;#b85c5c;#4a9940;#8aaa48;#3a7a72;#7a6080;#3a8a60;#b8ccaa;#2a4a2a;#cc7070;#70cc60;#aace60;#50a898;#9a80aa;#60aa80;#d8eec8
 EOF
+
+# also write to /etc/xdg so it applies system-wide as default
+sudo mkdir -p /etc/xdg/xfce4/terminal
+sudo cp "$CONFIG/xfce4/terminal/terminalrc" /etc/xdg/xfce4/terminal/terminalrc 2>/dev/null || true
+
 ok "xfce4-terminal configured"
 
 # ── 6. TMUX ────────────────────────────────────────────────────────────────────

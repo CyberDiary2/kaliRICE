@@ -1,0 +1,24 @@
+componentName: darbs
+welcomeStyleCalamares: true
+welcomeExpandingLogo: true
+strings:
+    productName:         darbs
+    shortProductName:    darbs
+    version:             rolling
+    shortVersion:        rolling
+    versionedName:       darbs rolling
+    shortVersionedName:  darbs rolling
+    bootloaderEntryName: darbs
+    productUrl:          https://github.com/CyberDiary2/kaliRICE
+    supportUrl:          https://github.com/CyberDiary2/kaliRICE
+    releaseNotesUrl:     https://github.com/CyberDiary2/kaliRICE
+images:
+    productLogo:         "logo.png"
+    productIcon:         "logo.png"
+    productWelcome:      "languages.png"
+slideshow: "show.qml"
+style:
+    sidebarBackground:    "#2d353b"
+    sidebarText:          "#d3c6aa"
+    sidebarTextSelect:    "#a7c080"
+    sidebarTextHighlight: "#a7c080"

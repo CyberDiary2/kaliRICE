@@ -1,168 +1,19 @@
 #!/bin/bash
-# configure calamares with darbs branding and full module config
+# calamares post-config — static files are in includes.chroot/etc/calamares/
+# this hook just copies branding images and creates the desktop launcher
 
 ok()   { echo "[OK]   $1"; }
 skip() { echo "[SKIP] $1 -- $2"; }
 
+# copy default calamares images into darbs branding dir
 BRAND_DIR="/etc/calamares/branding/darbs"
-MODS_DIR="/etc/calamares/modules"
-mkdir -p "$BRAND_DIR" "$MODS_DIR"
-
-# ── branding ──────────────────────────────────────────────────────────────────
-cat > "$BRAND_DIR/branding.desc" << 'EOF'
-componentName: darbs
-welcomeStyleCalamares: true
-welcomeExpandingLogo: true
-strings:
-    productName:         darbs
-    shortProductName:    darbs
-    version:             rolling
-    shortVersion:        rolling
-    versionedName:       darbs rolling
-    shortVersionedName:  darbs rolling
-    bootloaderEntryName: darbs
-    productUrl:          https://github.com/CyberDiary2/kaliRICE
-    supportUrl:          https://github.com/CyberDiary2/kaliRICE
-    releaseNotesUrl:     https://github.com/CyberDiary2/kaliRICE
-images:
-    productLogo:         "logo.png"
-    productIcon:         "logo.png"
-    productWelcome:      "languages.png"
-slideshow: "show.qml"
-style:
-    sidebarBackground:    "#2d353b"
-    sidebarText:          "#d3c6aa"
-    sidebarTextSelect:    "#a7c080"
-    sidebarTextHighlight: "#a7c080"
-EOF
-ok "branding.desc written"
-
+mkdir -p "$BRAND_DIR"
 for img in logo.png languages.png show.qml; do
     src="/usr/share/calamares/branding/default/$img"
-    [ -f "$src" ] && cp "$src" "$BRAND_DIR/" 2>/dev/null || true
+    [ -f "$src" ] && cp "$src" "$BRAND_DIR/" 2>/dev/null && ok "copied $img" || skip "$img" "not found"
 done
-ok "branding images copied"
 
-# ── settings.conf ─────────────────────────────────────────────────────────────
-cat > /etc/calamares/settings.conf << 'EOF'
----
-modules-search: [ local, /usr/lib/calamares/modules ]
-
-sequence:
-  - show:
-    - welcome
-    - locale
-    - keyboard
-    - partition
-    - users
-    - summary
-  - exec:
-    - partition
-    - mount
-    - unpackfs
-    - machineid
-    - fstab
-    - locale
-    - keyboard
-    - localecfg
-    - grubcfg
-    - bootloader
-    - networkcfg
-    - hwclock
-    - services-systemd
-    - displaymanager
-    - removeuser
-    - umount
-  - show:
-    - finished
-
-branding: darbs
-prompt-install: true
-dont-chroot: false
-oem-setup: false
-EOF
-ok "settings.conf written"
-
-# ── unpackfs ──────────────────────────────────────────────────────────────────
-cat > "$MODS_DIR/unpackfs.conf" << 'EOF'
----
-unpack:
-  - source: /run/live/medium/live/filesystem.squashfs
-    sourcefs: squashfs
-    destination: ""
-EOF
-ok "unpackfs.conf written"
-
-# ── users ─────────────────────────────────────────────────────────────────────
-cat > "$MODS_DIR/users.conf" << 'EOF'
----
-defaultGroups:
-  - sudo
-  - audio
-  - video
-  - cdrom
-  - dip
-  - plugdev
-  - netdev
-autologinGroup: autologin
-doAutologin: false
-sudoersGroup: sudo
-setRootPassword: false
-doReusePassword: true
-passwordRequirements:
-    nonempty: true
-userShell: /bin/bash
-EOF
-ok "users.conf written"
-
-# ── displaymanager ────────────────────────────────────────────────────────────
-cat > "$MODS_DIR/displaymanager.conf" << 'EOF'
----
-displaymanager: lightdm
-defaultDesktopEnvironment:
-    executable: startxfce4
-    desktopFile: xfce.desktop
-basicSetup: false
-EOF
-ok "displaymanager.conf written"
-
-# ── bootloader ────────────────────────────────────────────────────────────────
-cat > "$MODS_DIR/bootloader.conf" << 'EOF'
----
-efiBootLoader: grub
-grubInstall: grub-install
-grubMkconfig: grub-mkconfig
-grubCfg: /boot/grub/grub.cfg
-grubTimeout: 5
-installEFIFallback: true
-EOF
-ok "bootloader.conf written"
-
-# ── grubcfg ───────────────────────────────────────────────────────────────────
-cat > "$MODS_DIR/grubcfg.conf" << 'EOF'
----
-overwrite: true
-updateDistribution: darbs
-EOF
-ok "grubcfg.conf written"
-
-# ── fstab ─────────────────────────────────────────────────────────────────────
-cat > "$MODS_DIR/fstab.conf" << 'EOF'
----
-mountOptions:
-    default: defaults,noatime
-    btrfs: defaults,noatime,compress=zstd:1
-EOF
-ok "fstab.conf written"
-
-# ── removeuser ────────────────────────────────────────────────────────────────
-cat > "$MODS_DIR/removeuser.conf" << 'EOF'
----
-username: darbs
-EOF
-ok "removeuser.conf written"
-
-# ── desktop launcher ──────────────────────────────────────────────────────────
+# desktop launcher
 mkdir -p /home/darbs/Desktop
 cat > /home/darbs/Desktop/install.desktop << 'EOF'
 [Desktop Entry]

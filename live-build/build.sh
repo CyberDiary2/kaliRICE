@@ -24,6 +24,11 @@ lb clean --purge 2>/dev/null || true
 info "Running lb config..."
 bash auto/config
 
+info "Syncing kali-config into live-build config tree..."
+cp -r kali-config/common/package-lists/. config/package-lists/
+cp -r kali-config/common/hooks/.         config/hooks/
+cp -r kali-config/common/includes.chroot/. config/includes.chroot/
+
 info "Running lb build (this takes 30-60 minutes)..."
 lb build noauto 2>&1 | tee build.log
 

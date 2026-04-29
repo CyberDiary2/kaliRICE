@@ -7,10 +7,9 @@ lb config noauto \
     --apt-secure false \
     --architectures amd64 \
     --archive-areas "main contrib non-free non-free-firmware" \
-    --backports true \
     --binary-images iso-hybrid \
     --bootappend-live "boot=live components username=darbs hostname=darbs" \
-    --bootloaders grub-efi,syslinux \
+    --bootloaders grub-efi \
     --checksums sha256 \
     --debian-installer none \
     --debootstrap-options "--keyring=/usr/share/keyrings/kali-archive-keyring.gpg" \
@@ -19,12 +18,10 @@ lb config noauto \
     --iso-application "darbs" \
     --iso-publisher "darbs" \
     --iso-volume "darbs" \
-    --linux-flavours amd64 \
     --mirror-bootstrap http://http.kali.org/kali \
     --mirror-chroot http://http.kali.org/kali \
-    --mirror-chroot-security http://http.kali.org/kali \
     --security false \
-    --updates true \
+    --updates false \
     --source false \
     --variant xfce \
     "${@}"

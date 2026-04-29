@@ -289,12 +289,22 @@ try "set plymouth theme" sudo plymouth-set-default-theme darbs
 try "update initramfs" sudo update-initramfs -u
 
 # ── 13. GRUB ───────────────────────────────────────────────────────────────────
-info "Cleaning GRUB branding..."
+info "Configuring GRUB (black, terminal green)..."
 sudo rm -f /boot/grub/kali-grub.png /boot/grub/kali_background.png 2>/dev/null || true
-sudo sed -i 's/GRUB_TIMEOUT=.*/GRUB_TIMEOUT=5/'                              /etc/default/grub 2>/dev/null || true
-sudo sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"/' \
-    /etc/default/grub 2>/dev/null || true
-sudo sed -i '/GRUB_BACKGROUND/d' /etc/default/grub 2>/dev/null || true
+sudo rm -rf /boot/grub/themes/kali /usr/share/grub/themes/kali 2>/dev/null || true
+
+sudo bash -c 'cat > /etc/default/grub' << 'EOF'
+GRUB_DEFAULT=0
+GRUB_TIMEOUT=5
+GRUB_DISTRIBUTOR=darbs
+GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"
+GRUB_CMDLINE_LINUX=""
+GRUB_TERMINAL_OUTPUT=gfxterm
+GRUB_GFXMODE=auto
+GRUB_BACKGROUND=""
+GRUB_COLOR_NORMAL="light-green/black"
+GRUB_COLOR_HIGHLIGHT="black/light-green"
+EOF
 try "update-grub" sudo update-grub
 
 # ── 14. REMOVE KALI BRANDING ───────────────────────────────────────────────────

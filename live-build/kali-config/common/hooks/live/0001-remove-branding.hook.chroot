@@ -86,8 +86,8 @@ ScriptFile=/usr/share/plymouth/themes/darbs/darbs.script
 EOF
 
 cat > /usr/share/plymouth/themes/darbs/darbs.script << 'EOF'
-Window.SetBackgroundTopColor(0.106, 0.137, 0.141);
-Window.SetBackgroundBottomColor(0.106, 0.137, 0.141);
+Window.SetBackgroundTopColor(0, 0, 0);
+Window.SetBackgroundBottomColor(0, 0, 0);
 
 logo_image = Image("logo.png");
 logo_sprite = Sprite(logo_image);
@@ -95,10 +95,10 @@ logo_sprite.SetX(Window.GetWidth()  / 2 - logo_image.GetWidth()  / 2);
 logo_sprite.SetY(Window.GetHeight() / 2 - logo_image.GetHeight() / 2 - 60);
 
 bar_bg = Rectangle(0, Window.GetHeight() - 10, Window.GetWidth(), 8);
-bar_bg.SetFillColor(0.215, 0.263, 0.286, 1);
+bar_bg.SetFillColor(0.1, 0.1, 0.1, 1);
 
 bar = Rectangle(0, Window.GetHeight() - 10, 1, 8);
-bar.SetFillColor(0.655, 0.753, 0.502, 1);
+bar.SetFillColor(0.2, 1.0, 0.2, 1);
 
 fun progress_callback(duration, progress) {
     bar.SetWidth(Window.GetWidth() * progress);
@@ -108,22 +108,29 @@ Plymouth.SetBootProgressFunction(progress_callback);
 fun password_callback(prompt, bullets) {
     message_sprite = Sprite();
     message_sprite.SetPosition(Window.GetWidth() / 2 - 200, Window.GetHeight() / 2 + 40, 10000);
-    message_image = Image.Text(prompt, 0.655, 0.753, 0.502, 1);
+    message_image = Image.Text(prompt, 0.2, 1.0, 0.2, 1);
     message_sprite.SetImage(message_image);
 }
 Plymouth.SetDisplayPasswordFunction(password_callback);
 EOF
 
-# logo for plymouth
-if [ -f /usr/share/backgrounds/everforest/greeter.jpg ]; then
-    convert -resize 120x120 /usr/share/backgrounds/everforest/greeter.jpg \
-        /usr/share/plymouth/themes/darbs/logo.png 2>/dev/null || \
-    convert -size 120x120 xc:"#1b2421" \
-        /usr/share/plymouth/themes/darbs/logo.png 2>/dev/null || true
-else
-    convert -size 120x120 xc:"#1b2421" \
-        /usr/share/plymouth/themes/darbs/logo.png 2>/dev/null || true
-fi
+# install unifont for the VGA-style DARBS logo
+apt-get install -y fonts-unifont 2>/dev/null || true
+
+# generate pixelated DARBS logo: render small then upscale for chunky pixel look
+convert -size 150x50 xc:"#000000" \
+    -font /usr/share/fonts/opentype/unifont/unifont.otf \
+    -pointsize 24 \
+    -fill "#33FF33" \
+    -gravity Center \
+    -annotate 0 "DARBS" \
+    -filter point -resize 600x200 \
+    /usr/share/plymouth/themes/darbs/logo.png 2>/dev/null || \
+convert -size 600x200 xc:"#000000" \
+    -fill "#33FF33" \
+    -gravity Center \
+    -annotate 0 "DARBS" \
+    /usr/share/plymouth/themes/darbs/logo.png 2>/dev/null || true
 
 try "set plymouth theme darbs" \
     update-alternatives --install \

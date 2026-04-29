@@ -1,9 +1,9 @@
 #!/bin/bash
-# remove all Kali branding assets from the chroot
+# remove ALL Kali branding: wallpapers, logos, GRUB theme, Plymouth, LUKS screen
 
 set -e
 
-# remove Kali wallpaper packages
+# ── wallpaper packages ─────────────────────────────────────────────────────────
 apt-get remove -y --purge \
     kali-wallpapers-legacy \
     kali-wallpapers-2019 \
@@ -16,27 +16,122 @@ apt-get remove -y --purge \
 
 apt-get autoremove -y 2>/dev/null || true
 
-# remove Kali logo/dragon assets
-rm -f /usr/share/kali-themes/kali-logo*.png   2>/dev/null || true
+# ── logo / dragon assets ───────────────────────────────────────────────────────
+rm -f /usr/share/kali-themes/kali-logo*.png    2>/dev/null || true
 rm -f /usr/share/kali-themes/kali-dragon*.svg  2>/dev/null || true
 rm -f /usr/share/kali-themes/kali-dragon*.png  2>/dev/null || true
-rm -f /boot/grub/kali-grub.png                 2>/dev/null || true
-rm -f /boot/grub/kali_background.png           2>/dev/null || true
+rm -f /usr/share/pixmaps/kali-logo*.png        2>/dev/null || true
+rm -f /usr/share/pixmaps/kali-dragon*.png      2>/dev/null || true
 
-# remove Kali specific lightdm overrides
+# ── lightdm overrides ─────────────────────────────────────────────────────────
 rm -f /etc/lightdm/lightdm-gtk-greeter.conf.d/kali.conf 2>/dev/null || true
 
-# set hostname
+# ── hostname ──────────────────────────────────────────────────────────────────
 echo "darbs" > /etc/hostname
 sed -i "s/kali/darbs/g" /etc/hosts 2>/dev/null || true
 
-# set plymouth to minimal spinner (no Kali dragon)
-plymouth-set-default-theme spinner 2>/dev/null || \
-plymouth-set-default-theme text    2>/dev/null || true
+# ── /etc/os-release branding ──────────────────────────────────────────────────
+if [ -f /etc/os-release ]; then
+    sed -i 's/^NAME=.*/NAME="darbs"/'                           /etc/os-release
+    sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="darbs rolling"/'    /etc/os-release
+    sed -i 's/^HOME_URL=.*/HOME_URL="https:\/\/github.com\/CyberDiary2\/kaliRICE"/' /etc/os-release
+    sed -i 's/^SUPPORT_URL=.*/SUPPORT_URL="https:\/\/github.com\/CyberDiary2\/kaliRICE"/' /etc/os-release
+    sed -i '/^LOGO=/d' /etc/os-release
+fi
+cp /etc/os-release /usr/lib/os-release 2>/dev/null || true
 
-# clean GRUB of Kali background
-sed -i '/GRUB_BACKGROUND/d'                            /etc/default/grub 2>/dev/null || true
-sed -i 's/GRUB_TIMEOUT=.*/GRUB_TIMEOUT=3/'            /etc/default/grub 2>/dev/null || true
-sed -i 's/GRUB_DISTRIBUTOR=.*/GRUB_DISTRIBUTOR=darbs/' /etc/default/grub 2>/dev/null || true
-sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT="quiet"/' \
-    /etc/default/grub 2>/dev/null || true
+# ── GRUB theme ────────────────────────────────────────────────────────────────
+# remove Kali GRUB background and theme
+rm -f /boot/grub/kali-grub.png            2>/dev/null || true
+rm -f /boot/grub/kali_background.png      2>/dev/null || true
+rm -rf /usr/share/grub/themes/kali        2>/dev/null || true
+rm -rf /boot/grub/themes/kali             2>/dev/null || true
+
+# install a clean minimal GRUB config
+cat > /etc/default/grub << 'EOF'
+GRUB_DEFAULT=0
+GRUB_TIMEOUT=3
+GRUB_DISTRIBUTOR=darbs
+GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"
+GRUB_CMDLINE_LINUX=""
+GRUB_TERMINAL_OUTPUT=console
+EOF
+
+# ── Plymouth (boot splash + LUKS password screen) ─────────────────────────────
+# The LUKS passphrase screen is rendered by Plymouth, so theming Plymouth
+# also themes the encryption prompt.
+
+# install minimal dark Plymouth theme that matches Everforest
+mkdir -p /usr/share/plymouth/themes/darbs
+
+cat > /usr/share/plymouth/themes/darbs/darbs.plymouth << 'EOF'
+[Plymouth Theme]
+Name=darbs
+Description=Minimal dark Everforest boot theme
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/darbs
+ScriptFile=/usr/share/plymouth/themes/darbs/darbs.script
+EOF
+
+cat > /usr/share/plymouth/themes/darbs/darbs.script << 'EOF'
+# darbs Plymouth theme — dark background, green accent text
+
+Window.SetBackgroundTopColor(0.106, 0.137, 0.141);
+Window.SetBackgroundBottomColor(0.106, 0.137, 0.141);
+
+logo_image = Image("logo.png");
+logo_sprite = Sprite(logo_image);
+logo_sprite.SetX(Window.GetWidth()  / 2 - logo_image.GetWidth()  / 2);
+logo_sprite.SetY(Window.GetHeight() / 2 - logo_image.GetHeight() / 2 - 60);
+
+# progress bar
+bar_bg = Rectangle(0, Window.GetHeight() - 10, Window.GetWidth(), 8);
+bar_bg.SetFillColor(0.215, 0.263, 0.286, 1);
+
+bar = Rectangle(0, Window.GetHeight() - 10, 1, 8);
+bar.SetFillColor(0.655, 0.753, 0.502, 1);
+
+fun progress_callback(duration, progress) {
+    bar.SetWidth(Window.GetWidth() * progress);
+}
+Plymouth.SetBootProgressFunction(progress_callback);
+
+# password prompt (LUKS)
+fun password_callback(prompt, bullets) {
+    message_sprite = Sprite();
+    message_sprite.SetPosition(
+        Window.GetWidth()  / 2 - 200,
+        Window.GetHeight() / 2 + 40,
+        10000
+    );
+    message_image = Image.Text(prompt, 0.655, 0.753, 0.502, 1);
+    message_sprite.SetImage(message_image);
+}
+Plymouth.SetDisplayPasswordFunction(password_callback);
+EOF
+
+# use a small placeholder logo (just a dot if no logo exists)
+if [ ! -f /usr/share/plymouth/themes/darbs/logo.png ]; then
+    # copy greeter wallpaper thumbnail as logo placeholder
+    if [ -f /usr/share/backgrounds/everforest/greeter.jpg ]; then
+        convert -resize 120x120 /usr/share/backgrounds/everforest/greeter.jpg \
+            /usr/share/plymouth/themes/darbs/logo.png 2>/dev/null || \
+        cp /usr/share/plymouth/themes/default.plymouth \
+            /usr/share/plymouth/themes/darbs/logo.png 2>/dev/null || true
+    fi
+fi
+
+# activate darbs theme
+update-alternatives --install \
+    /usr/share/plymouth/themes/default.plymouth \
+    default.plymouth \
+    /usr/share/plymouth/themes/darbs/darbs.plymouth \
+    200 2>/dev/null || true
+
+plymouth-set-default-theme darbs 2>/dev/null || \
+plymouth-set-default-theme spinner 2>/dev/null || true
+
+# rebuild initramfs with new Plymouth theme
+update-initramfs -u 2>/dev/null || true

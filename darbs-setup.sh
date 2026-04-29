@@ -318,9 +318,80 @@ panel-position=top
 EOF
 ok "LightDM greeter configured"
 
-# ── 12. PLYMOUTH ───────────────────────────────────────────────────────────────
-info "Setting Plymouth to spinner (safe for LUKS encryption)..."
-try "set plymouth spinner" sudo plymouth-set-default-theme spinner
+# ── 12. PLYMOUTH (DARBS IBM VGA THEME) ────────────────────────────────────────
+info "Installing DARBS Plymouth theme..."
+PLYMOUTH_DIR="/usr/share/plymouth/themes/darbs"
+sudo mkdir -p "$PLYMOUTH_DIR"
+
+sudo tee "$PLYMOUTH_DIR/darbs.plymouth" > /dev/null << 'EOF'
+[Plymouth Theme]
+Name=darbs
+Description=DARBS retro IBM VGA boot theme
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/darbs
+ScriptFile=/usr/share/plymouth/themes/darbs/darbs.script
+EOF
+
+sudo tee "$PLYMOUTH_DIR/darbs.script" > /dev/null << 'EOF'
+Window.SetBackgroundTopColor(0, 0, 0);
+Window.SetBackgroundBottomColor(0, 0, 0);
+
+# DARBS logo centered, slightly above middle
+logo_image = Image("logo.png");
+logo_sprite = Sprite(logo_image);
+logo_sprite.SetX(Window.GetWidth()  / 2 - logo_image.GetWidth()  / 2);
+logo_sprite.SetY(Window.GetHeight() / 2 - logo_image.GetHeight() / 2 - 80);
+logo_sprite.SetZ(10);
+
+# progress bar at bottom
+bar_bg = Rectangle(0, Window.GetHeight() - 8, Window.GetWidth(), 8);
+bar_bg.SetFillColor(0.1, 0.1, 0.1, 1);
+bar = Rectangle(0, Window.GetHeight() - 8, 1, 8);
+bar.SetFillColor(0.2, 1.0, 0.2, 1);
+
+fun progress_callback(duration, progress) {
+    bar.SetWidth(Window.GetWidth() * progress);
+}
+Plymouth.SetBootProgressFunction(progress_callback);
+
+# LUKS password prompt — show prompt text and bullet chars for each keypress
+prompt_sprite = Sprite();
+prompt_sprite.SetZ(10000);
+bullet_sprite = Sprite();
+bullet_sprite.SetZ(10000);
+
+fun password_callback(prompt, bullets) {
+    prompt_sprite.SetX(Window.GetWidth() / 2 - 250);
+    prompt_sprite.SetY(Window.GetHeight() / 2 + 60);
+    prompt_sprite.SetImage(Image.Text(prompt, 0.2, 1.0, 0.2, 1));
+
+    bullet_str = "";
+    i = 0;
+    while (i < bullets) { bullet_str = bullet_str + "* "; i++; }
+    bullet_sprite.SetX(Window.GetWidth() / 2 - 250);
+    bullet_sprite.SetY(Window.GetHeight() / 2 + 90);
+    bullet_sprite.SetImage(Image.Text(bullet_str, 0.2, 1.0, 0.2, 1));
+}
+Plymouth.SetDisplayPasswordFunction(password_callback);
+EOF
+
+# generate DARBS logo: render small then upscale for chunky VGA pixel look
+sudo convert -size 150x50 xc:"#000000" \
+    -font /usr/share/fonts/opentype/unifont/unifont.otf \
+    -pointsize 24 -fill "#33FF33" -gravity Center -annotate 0 "DARBS" \
+    -filter point -resize 600x200 \
+    "$PLYMOUTH_DIR/logo.png" 2>/dev/null && ok "DARBS logo generated" || \
+    skip "DARBS logo" "imagemagick/unifont not available"
+
+try "register darbs plymouth theme" \
+    sudo update-alternatives --install \
+        /usr/share/plymouth/themes/default.plymouth \
+        default.plymouth \
+        "$PLYMOUTH_DIR/darbs.plymouth" 200
+
+try "set darbs plymouth theme" sudo plymouth-set-default-theme darbs
 try "update initramfs" sudo update-initramfs -u
 
 # ── 13. GRUB ───────────────────────────────────────────────────────────────────

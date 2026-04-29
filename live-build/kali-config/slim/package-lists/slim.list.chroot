@@ -6,6 +6,8 @@ xserver-xorg-input-libinput
 lightdm
 lightdm-gtk-greeter
 calamares
+squashfs-tools
+rsync
 tmux
 git
 curl

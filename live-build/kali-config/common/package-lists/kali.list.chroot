@@ -2,6 +2,10 @@ kali-linux-default
 kali-desktop-xfce
 calamares
 calamares-settings-kali
+tor
+iptables
+macchanger
+resolvconf
 xfce4-whiskermenu-plugin
 xfce4-genmon-plugin
 xfce4-battery-plugin

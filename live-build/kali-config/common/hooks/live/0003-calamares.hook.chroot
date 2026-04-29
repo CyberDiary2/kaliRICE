@@ -1,0 +1,66 @@
+#!/bin/bash
+# configure calamares installer with darbs branding
+
+set -e
+
+BRAND_DIR="/etc/calamares/branding/darbs"
+mkdir -p "$BRAND_DIR"
+
+# branding.desc
+cat > "$BRAND_DIR/branding.desc" << 'EOF'
+componentName: darbs
+
+welcomeStyleCalamares: true
+welcomeExpandingLogo: true
+
+strings:
+    productName:         darbs
+    shortProductName:    darbs
+    version:             rolling
+    shortVersion:        rolling
+    versionedName:       darbs rolling
+    shortVersionedName:  darbs rolling
+    bootloaderEntryName: darbs
+    productUrl:          https://github.com/CyberDiary2/kaliRICE
+    supportUrl:          https://github.com/CyberDiary2/kaliRICE
+    releaseNotesUrl:     https://github.com/CyberDiary2/kaliRICE
+
+images:
+    productLogo:         "logo.png"
+    productIcon:         "logo.png"
+    productWelcome:      "languages.png"
+
+slideshow: "show.qml"
+
+style:
+    sidebarBackground:    "#2d353b"
+    sidebarText:          "#d3c6aa"
+    sidebarTextSelect:    "#a7c080"
+    sidebarTextHighlight: "#a7c080"
+EOF
+
+# use Calamares default images as fallback
+cp /usr/share/calamares/branding/default/logo.png      "$BRAND_DIR/" 2>/dev/null || true
+cp /usr/share/calamares/branding/default/languages.png "$BRAND_DIR/" 2>/dev/null || true
+cp /usr/share/calamares/branding/default/show.qml      "$BRAND_DIR/" 2>/dev/null || true
+
+# point calamares settings to darbs branding
+if [ -f /etc/calamares/settings.conf ]; then
+    sed -i 's/branding:.*/branding: darbs/' /etc/calamares/settings.conf
+fi
+
+# create a desktop launcher for calamares on the live desktop
+mkdir -p /home/darbs/Desktop
+cat > /home/darbs/Desktop/install.desktop << 'EOF'
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Install darbs
+Comment=Install this system to disk
+Exec=pkexec calamares
+Icon=calamares
+Terminal=false
+Categories=System;
+EOF
+chmod +x /home/darbs/Desktop/install.desktop
+chown darbs:darbs /home/darbs/Desktop/install.desktop

@@ -1,0 +1,59 @@
+#!/bin/bash
+# create darbs user with sudo and correct home structure
+
+set -e
+
+USERNAME="darbs"
+
+# rename default kali user if it exists
+if id kali &>/dev/null && [ "$USERNAME" != "kali" ]; then
+    usermod -l "$USERNAME"        kali
+    usermod -d /home/"$USERNAME" -m "$USERNAME"
+    groupmod -n "$USERNAME"       kali
+    sed -i "s/kali/$USERNAME/g" /etc/sudoers.d/kali 2>/dev/null || true
+fi
+
+# create user if still missing
+if ! id "$USERNAME" &>/dev/null; then
+    useradd -m -s /bin/bash -G sudo,adm,cdrom,dip,plugdev,netdev "$USERNAME"
+fi
+
+# passwordless sudo for live session
+echo "$USERNAME ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/"$USERNAME"
+chmod 440 /etc/sudoers.d/"$USERNAME"
+
+# set password to darbs
+echo "$USERNAME:darbs" | chpasswd
+
+# fix home ownership
+chown -R "$USERNAME":"$USERNAME" /home/"$USERNAME"
+
+# create XDG dirs
+su - "$USERNAME" -c "mkdir -p \
+    /home/$USERNAME/.config/autostart \
+    /home/$USERNAME/Desktop \
+    /home/$USERNAME/Downloads \
+    /home/$USERNAME/Pictures/wallpapers"
+
+# download greeter wallpaper into system backgrounds during build
+mkdir -p /usr/share/backgrounds/everforest
+curl -sL \
+    "https://raw.githubusercontent.com/cyberdiary2/dotfiles/main/wallpapers/0001.jpg" \
+    -o /usr/share/backgrounds/everforest/greeter.jpg || true
+chmod 644 /usr/share/backgrounds/everforest/greeter.jpg 2>/dev/null || true
+
+# install Everforest GTK theme
+if [ ! -d /usr/share/themes/Everforest-Dark-BL ]; then
+    git clone --depth=1 https://github.com/Fausto-Korpsvart/Everforest-GTK-Theme \
+        /tmp/everforest-gtk 2>/dev/null
+    cp -r /tmp/everforest-gtk/themes/Everforest-Dark-BL /usr/share/themes/
+    rm -rf /tmp/everforest-gtk
+fi
+
+# Papirus green folders
+if command -v papirus-folders &>/dev/null; then
+    papirus-folders -C green --theme Papirus-Dark 2>/dev/null || true
+fi
+
+# fix home ownership again after all the above
+chown -R "$USERNAME":"$USERNAME" /home/"$USERNAME"

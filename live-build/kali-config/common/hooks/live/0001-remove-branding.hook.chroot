@@ -1,0 +1,42 @@
+#!/bin/bash
+# remove all Kali branding assets from the chroot
+
+set -e
+
+# remove Kali wallpaper packages
+apt-get remove -y --purge \
+    kali-wallpapers-legacy \
+    kali-wallpapers-2019 \
+    kali-wallpapers-2020 \
+    kali-wallpapers-2021 \
+    kali-wallpapers-2022 \
+    kali-wallpapers-2023 \
+    kali-wallpapers-2024 \
+    2>/dev/null || true
+
+apt-get autoremove -y 2>/dev/null || true
+
+# remove Kali logo/dragon assets
+rm -f /usr/share/kali-themes/kali-logo*.png   2>/dev/null || true
+rm -f /usr/share/kali-themes/kali-dragon*.svg  2>/dev/null || true
+rm -f /usr/share/kali-themes/kali-dragon*.png  2>/dev/null || true
+rm -f /boot/grub/kali-grub.png                 2>/dev/null || true
+rm -f /boot/grub/kali_background.png           2>/dev/null || true
+
+# remove Kali specific lightdm overrides
+rm -f /etc/lightdm/lightdm-gtk-greeter.conf.d/kali.conf 2>/dev/null || true
+
+# set hostname
+echo "darbs" > /etc/hostname
+sed -i "s/kali/darbs/g" /etc/hosts 2>/dev/null || true
+
+# set plymouth to minimal spinner (no Kali dragon)
+plymouth-set-default-theme spinner 2>/dev/null || \
+plymouth-set-default-theme text    2>/dev/null || true
+
+# clean GRUB of Kali background
+sed -i '/GRUB_BACKGROUND/d'                            /etc/default/grub 2>/dev/null || true
+sed -i 's/GRUB_TIMEOUT=.*/GRUB_TIMEOUT=3/'            /etc/default/grub 2>/dev/null || true
+sed -i 's/GRUB_DISTRIBUTOR=.*/GRUB_DISTRIBUTOR=darbs/' /etc/default/grub 2>/dev/null || true
+sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT="quiet"/' \
+    /etc/default/grub 2>/dev/null || true

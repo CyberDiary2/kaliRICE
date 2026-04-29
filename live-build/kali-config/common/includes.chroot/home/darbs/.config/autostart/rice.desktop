@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=darbs rice setup
+Comment=Apply Everforest rice on first login
+Exec=bash -c "sleep 3 && bash /home/darbs/rice-kali.sh 2>&1 | tee /home/darbs/rice-install.log; rm -f /home/darbs/.config/autostart/rice.desktop"
+Hidden=false
+NoDisplay=false
+X-GNOME-Autostart-enabled=true
+StartupNotify=false
+Terminal=true

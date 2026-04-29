@@ -1,0 +1,91 @@
+#!/bin/bash
+# install tools that need more than apt: nuclei latest, burp suite community,
+# chisel, ligolo-ng, pwncat, evil-winrm, etc.
+
+set -e
+
+# ── Nuclei (latest binary from GitHub) ────────────────────────────────────────
+echo "installing nuclei..."
+NUCLEI_VER=$(curl -s https://api.github.com/repos/projectdiscovery/nuclei/releases/latest \
+    | grep '"tag_name"' | cut -d'"' -f4)
+curl -sL "https://github.com/projectdiscovery/nuclei/releases/download/${NUCLEI_VER}/nuclei_${NUCLEI_VER#v}_linux_amd64.zip" \
+    -o /tmp/nuclei.zip
+unzip -q /tmp/nuclei.zip -d /tmp/nuclei
+install -m 755 /tmp/nuclei/nuclei /usr/local/bin/nuclei
+rm -rf /tmp/nuclei /tmp/nuclei.zip
+
+# ── Chisel (fast TCP/UDP tunnel) ──────────────────────────────────────────────
+echo "installing chisel..."
+CHISEL_VER=$(curl -s https://api.github.com/repos/jpillora/chisel/releases/latest \
+    | grep '"tag_name"' | cut -d'"' -f4)
+curl -sL "https://github.com/jpillora/chisel/releases/download/${CHISEL_VER}/chisel_${CHISEL_VER#v}_linux_amd64.gz" \
+    -o /tmp/chisel.gz
+gunzip /tmp/chisel.gz
+install -m 755 /tmp/chisel /usr/local/bin/chisel
+rm -f /tmp/chisel
+
+# ── Ligolo-ng (tunneling agent + proxy) ───────────────────────────────────────
+echo "installing ligolo-ng..."
+LIGOLO_VER=$(curl -s https://api.github.com/repos/nicocha30/ligolo-ng/releases/latest \
+    | grep '"tag_name"' | cut -d'"' -f4)
+curl -sL "https://github.com/nicocha30/ligolo-ng/releases/download/${LIGOLO_VER}/ligolo-ng_agent_${LIGOLO_VER#v}_linux_amd64.tar.gz" \
+    -o /tmp/ligolo-agent.tar.gz
+curl -sL "https://github.com/nicocha30/ligolo-ng/releases/download/${LIGOLO_VER}/ligolo-ng_proxy_${LIGOLO_VER#v}_linux_amd64.tar.gz" \
+    -o /tmp/ligolo-proxy.tar.gz
+tar -xzf /tmp/ligolo-agent.tar.gz -C /tmp
+tar -xzf /tmp/ligolo-proxy.tar.gz -C /tmp
+install -m 755 /tmp/agent /usr/local/bin/ligolo-agent
+install -m 755 /tmp/proxy /usr/local/bin/ligolo-proxy
+rm -f /tmp/ligolo-*.tar.gz /tmp/agent /tmp/proxy
+
+# ── pwncat-cs (post-exploitation framework) ───────────────────────────────────
+echo "installing pwncat-cs..."
+pip3 install pwncat-cs --quiet 2>/dev/null || true
+
+# ── evil-winrm ────────────────────────────────────────────────────────────────
+echo "installing evil-winrm..."
+gem install evil-winrm --quiet 2>/dev/null || true
+
+# ── Caido (modern Burp alternative, free tier) ────────────────────────────────
+echo "installing Caido..."
+CAIDO_VER=$(curl -s https://api.github.com/repos/caido/caido/releases/latest \
+    | grep '"tag_name"' | cut -d'"' -f4 || echo "")
+if [ -n "$CAIDO_VER" ]; then
+    curl -sL "https://github.com/caido/caido/releases/download/${CAIDO_VER}/caido-cli-${CAIDO_VER#v}-linux-x86_64.tar.gz" \
+        -o /tmp/caido.tar.gz 2>/dev/null || true
+    if [ -f /tmp/caido.tar.gz ]; then
+        tar -xzf /tmp/caido.tar.gz -C /tmp
+        find /tmp -name "caido*" -type f -exec install -m 755 {} /usr/local/bin/caido \; 2>/dev/null || true
+        rm -f /tmp/caido.tar.gz
+    fi
+fi
+
+# ── desktop entries for tools that lack them ──────────────────────────────────
+mkdir -p /usr/share/applications
+
+cat > /usr/share/applications/anonsurf.desktop << 'EOF'
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=AnonSurf
+Comment=Anonymize traffic through Tor
+Exec=pkexec anonsurf start
+Icon=network-vpn
+Terminal=false
+Categories=Network;Security;
+EOF
+
+cat > /usr/share/applications/codium.desktop << 'EOF'
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=VSCodium
+Comment=Open source code editor
+Exec=codium %F
+Icon=vscodium
+Terminal=false
+MimeType=text/plain;
+Categories=TextEditor;Development;IDE;
+EOF
+
+echo "special installs done."

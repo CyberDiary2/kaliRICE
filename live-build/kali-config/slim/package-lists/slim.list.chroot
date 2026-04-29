@@ -8,6 +8,8 @@ lightdm-gtk-greeter
 calamares
 squashfs-tools
 rsync
+isc-dhcp-client
+network-manager
 tmux
 git
 curl

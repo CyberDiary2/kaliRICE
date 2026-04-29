@@ -126,13 +126,13 @@ MiscCursorShape=TERMINAL_CURSOR_SHAPE_BLOCK
 MiscDefaultGeometry=100x30
 MiscMenubarDefault=FALSE
 BackgroundMode=TERMINAL_BACKGROUND_TRANSPARENT
-BackgroundDarkness=0.80
-ColorForeground=#a7c080
-ColorBackground=#1b2421
-ColorCursor=#a7c080
-ColorCursorForeground=#1b2421
-ColorBold=#d3c6aa
-ColorPalette=#1b2421;#e67e80;#a7c080;#dbbc7f;#7fbbb3;#d699b6;#83c092;#d3c6aa;#475258;#e67e80;#a7c080;#dbbc7f;#7fbbb3;#d699b6;#83c092;#d3c6aa
+BackgroundDarkness=0.92
+ColorForeground=#c8c5a8
+ColorBackground=#1a1d16
+ColorCursor=#8aad6a
+ColorCursorForeground=#1a1d16
+ColorBold=#e8e5c8
+ColorPalette=#1a1d16;#cc7a7a;#8aad6a;#c4a882;#5a9090;#9a7aaa;#6aaa8a;#c8c5a8;#3a3d32;#dd9999;#a0c882;#d4b899;#7aaaba;#b099c8;#8abaa0;#e8e5d0
 EOF
 ok "xfce4-terminal configured"
 

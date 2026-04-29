@@ -1,17 +1,47 @@
 #!/bin/bash
 # calamares post-config — static files are in includes.chroot/etc/calamares/
-# this hook just copies branding images and creates the desktop launcher
+# this hook copies branding images or generates fallbacks
 
 ok()   { echo "[OK]   $1"; }
 skip() { echo "[SKIP] $1 -- $2"; }
 
-# copy default calamares images into darbs branding dir
 BRAND_DIR="/etc/calamares/branding/darbs"
 mkdir -p "$BRAND_DIR"
-for img in logo.png languages.png show.qml; do
+
+# copy default calamares images, generate fallbacks if missing
+for img in logo.png languages.png; do
     src="/usr/share/calamares/branding/default/$img"
-    [ -f "$src" ] && cp "$src" "$BRAND_DIR/" 2>/dev/null && ok "copied $img" || skip "$img" "not found"
+    if [ -f "$src" ]; then
+        cp "$src" "$BRAND_DIR/" 2>/dev/null && ok "copied $img"
+    else
+        convert -size 320x200 xc:"#2d353b" \
+            -fill "#a7c080" -gravity Center \
+            -font /usr/share/fonts/opentype/unifont/unifont.otf \
+            -pointsize 28 -annotate 0 "darbs" \
+            "$BRAND_DIR/$img" 2>/dev/null && ok "generated $img" || \
+        convert -size 320x200 xc:"#2d353b" "$BRAND_DIR/$img" 2>/dev/null || \
+        cp /dev/null "$BRAND_DIR/$img" 2>/dev/null || true
+    fi
 done
+
+# generate minimal show.qml if not available from defaults
+src="/usr/share/calamares/branding/default/show.qml"
+if [ -f "$src" ]; then
+    cp "$src" "$BRAND_DIR/" 2>/dev/null && ok "copied show.qml"
+else
+    cat > "$BRAND_DIR/show.qml" << 'EOF'
+import QtQuick 2.0
+import calamares.slideshow 1.0
+
+Presentation {
+    id: presentation
+    Slide {
+        Image { source: "logo.png"; anchors.centerIn: parent }
+    }
+}
+EOF
+    ok "generated show.qml"
+fi
 
 # desktop launcher
 mkdir -p /home/darbs/Desktop

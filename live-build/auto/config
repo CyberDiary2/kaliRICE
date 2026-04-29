@@ -23,5 +23,4 @@ lb config noauto \
     --security false \
     --updates false \
     --source false \
-    --variant xfce \
     "${@}"

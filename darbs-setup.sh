@@ -53,13 +53,41 @@ else
     ok "Everforest GTK theme already present"
 fi
 
-# ── 3. PAPIRUS FOLDERS ─────────────────────────────────────────────────────────
-info "Configuring Papirus icon theme..."
-if command -v papirus-folders &>/dev/null; then
-    try "papirus green folders" papirus-folders -C green --theme Papirus-Dark
-else
-    skip "papirus-folders" "not installed"
+# ── 3. ICONS (Papirus-Dark + green folders + custom whisker icon) ──────────────
+info "Configuring icon theme..."
+
+# install papirus-folders if missing
+if ! command -v papirus-folders &>/dev/null; then
+    wget -qO- https://raw.githubusercontent.com/PapirusDevelopmentTeam/papirus-folders/master/install.sh \
+        | sudo sh 2>/dev/null && ok "papirus-folders installed" || skip "papirus-folders" "install failed"
 fi
+command -v papirus-folders &>/dev/null && \
+    try "papirus green folders" papirus-folders -C green --theme Papirus-Dark
+
+# generate custom DARBS whisker menu icon (moss green terminal symbol)
+ICON_DIR="/usr/share/pixmaps"
+sudo convert -size 64x64 xc:"#2d353b" \
+    -fill "#a7c080" \
+    -font /usr/share/fonts/opentype/unifont/unifont.otf \
+    -pointsize 36 -gravity Center -annotate 0 "D" \
+    "$ICON_DIR/darbs-menu.png" 2>/dev/null && ok "darbs menu icon generated" || \
+    skip "darbs menu icon" "imagemagick failed"
+
+# set whisker menu to use the custom icon
+WHISKER_ID=$(xfconf-query -c xfce4-panel -p /plugins -l 2>/dev/null | \
+    grep "whiskermenu" | grep -oP 'plugin-\d+' | head -1 | grep -oP '\d+')
+if [ -n "$WHISKER_ID" ]; then
+    xfconf-query -c xfce4-panel \
+        -p "/plugins/plugin-${WHISKER_ID}/button-icon" \
+        -s "$ICON_DIR/darbs-menu.png" 2>/dev/null || \
+    xfconf-query -c xfce4-panel \
+        -p "/plugins/plugin-${WHISKER_ID}/button-icon" \
+        --create -t string -s "$ICON_DIR/darbs-menu.png" 2>/dev/null || true
+    ok "whisker menu icon set"
+fi
+
+# apply Papirus-Dark icon theme system-wide
+xfconf-query -c xsettings -p /Net/IconThemeName -s "Papirus-Dark" 2>/dev/null || true
 
 # ── 4. WALLPAPERS ──────────────────────────────────────────────────────────────
 info "Downloading wallpapers..."

@@ -1,0 +1,70 @@
+#!/bin/bash
+# install extra packages one by one — skips any that fail
+
+ok()   { echo "[OK]   $1"; }
+skip() { echo "[SKIP] $1 -- $2"; }
+
+pkg() {
+    apt-get install -y "$1" 2>/dev/null && ok "$1" || skip "$1" "not available"
+}
+
+apt-get update -q 2>/dev/null || true
+
+echo "--- security tools ---"
+pkg wireshark
+pkg burpsuite
+pkg maltego
+pkg ffuf
+pkg gobuster
+pkg sqlmap
+pkg nikto
+pkg hydra
+pkg nmap
+pkg netcat-traditional
+pkg john
+pkg hashcat
+pkg aircrack-ng
+pkg wfuzz
+pkg dirb
+pkg enum4linux
+pkg smbclient
+pkg responder
+pkg crackmapexec
+pkg impacket-scripts
+pkg bloodhound
+pkg neo4j
+pkg feroxbuster
+pkg dirsearch
+
+echo "--- privacy tools ---"
+pkg firejail
+pkg onionshare
+pkg mat2
+pkg bleachbit
+pkg torbrowser-launcher
+pkg secure-delete
+pkg chkrootkit
+pkg rkhunter
+
+echo "--- productivity ---"
+pkg libreoffice
+pkg gimp
+pkg ghostwriter
+
+echo "--- dev / utility ---"
+pkg python3-pip
+pkg python3-venv
+pkg docker.io
+pkg docker-compose
+pkg jq
+pkg bat
+pkg ripgrep
+pkg fd-find
+pkg fzf
+pkg htop
+pkg tree
+pkg unzip
+pkg p7zip-full
+
+echo ""
+echo "=== extra packages complete ==="

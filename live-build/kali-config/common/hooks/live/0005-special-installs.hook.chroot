@@ -88,4 +88,47 @@ MimeType=text/plain;
 Categories=TextEditor;Development;IDE;
 EOF
 
+# ── Obsidian ──────────────────────────────────────────────────────────────────
+echo "installing Obsidian..."
+OBSIDIAN_VER=$(curl -s https://api.github.com/repos/obsidianmd/obsidian-releases/releases/latest \
+    | grep '"tag_name"' | cut -d'"' -f4)
+curl -sL "https://github.com/obsidianmd/obsidian-releases/releases/download/${OBSIDIAN_VER}/obsidian_${OBSIDIAN_VER#v}_amd64.deb" \
+    -o /tmp/obsidian.deb
+dpkg -i /tmp/obsidian.deb || apt-get install -f -y
+rm -f /tmp/obsidian.deb
+
+# ── Joplin ────────────────────────────────────────────────────────────────────
+echo "installing Joplin..."
+JOPLIN_VER=$(curl -s https://api.github.com/repos/laurent22/joplin/releases/latest \
+    | grep '"tag_name"' | grep -v 'android\|ios\|cli' | head -1 | cut -d'"' -f4)
+# Joplin desktop releases are tagged as v2.x.x (no suffix)
+curl -sL "https://github.com/laurent22/joplin/releases/download/${JOPLIN_VER}/Joplin-${JOPLIN_VER#v}.deb" \
+    -o /tmp/joplin.deb 2>/dev/null || \
+curl -sL "https://github.com/laurent22/joplin/releases/download/${JOPLIN_VER}/joplin_${JOPLIN_VER#v}_amd64.deb" \
+    -o /tmp/joplin.deb 2>/dev/null || true
+if [ -f /tmp/joplin.deb ] && [ -s /tmp/joplin.deb ]; then
+    dpkg -i /tmp/joplin.deb || apt-get install -f -y
+    rm -f /tmp/joplin.deb
+else
+    # fallback: install via AppImage and wrap it
+    mkdir -p /opt/joplin
+    curl -sL "https://github.com/laurent22/joplin/releases/download/${JOPLIN_VER}/Joplin-${JOPLIN_VER#v}.AppImage" \
+        -o /opt/joplin/Joplin.AppImage || true
+    chmod +x /opt/joplin/Joplin.AppImage 2>/dev/null || true
+    ln -sf /opt/joplin/Joplin.AppImage /usr/local/bin/joplin-desktop 2>/dev/null || true
+
+    cat > /usr/share/applications/joplin.desktop << 'DEOF'
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Joplin
+Comment=Note taking and to-do application
+Exec=/opt/joplin/Joplin.AppImage --no-sandbox %u
+Icon=joplin
+Terminal=false
+Categories=Office;Notes;
+MimeType=x-scheme-handler/joplin;
+DEOF
+fi
+
 echo "special installs done."

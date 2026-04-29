@@ -35,6 +35,11 @@ secure-delete
 chkrootkit
 rkhunter
 
+# ── productivity / creative ────────────────────────────────────────────────────
+libreoffice
+gimp
+ghostwriter
+
 # ── dev / utility ─────────────────────────────────────────────────────────────
 python3-pip
 python3-venv

@@ -3,7 +3,6 @@ kali-desktop-xfce
 lightdm
 lightdm-gtk-greeter
 calamares
-calamares-settings-kali
 tor
 iptables
 macchanger
@@ -20,7 +19,7 @@ curl
 wget
 fonts-jetbrains-mono
 papirus-icon-theme
-neofetch
+fastfetch
 imagemagick
 plymouth
 plymouth-themes

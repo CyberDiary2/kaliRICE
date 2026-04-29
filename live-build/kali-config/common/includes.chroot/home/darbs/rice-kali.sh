@@ -31,7 +31,7 @@ sudo apt install -y \
     wget \
     fonts-jetbrains-mono \
     papirus-icon-theme \
-    neofetch \
+    fastfetch \
     imagemagick
 
 # ─── 2. EVERFOREST GTK THEME ───────────────────────────────────────────────────
@@ -295,36 +295,22 @@ xfconf-query -c xfce4-panel -p /panels/panel-1/background-rgba \
 xfconf-query -c xfce4-panel -p /panels/panel-1/background-rgba \
     -s 0.176 -s 0.212 -s 0.231 -s 0.85 2>/dev/null || true
 
-# ─── 11. NEOFETCH ──────────────────────────────────────────────────────────────
-info "Configuring neofetch..."
-mkdir -p "$CONFIG/neofetch"
-cat > "$CONFIG/neofetch/config.conf" << 'EOF'
-print_info() {
-    info title
-    info underline
-    info "OS"       distro
-    info "Kernel"   kernel
-    info "Uptime"   uptime
-    info "Packages" packages
-    info "Shell"    shell
-    info "WM"       wm
-    info "Terminal" term
-    info "Font"     term_font
-    info "CPU"      cpu
-    info "Memory"   memory
-    prin ""
+# ─── 11. FASTFETCH ─────────────────────────────────────────────────────────────
+info "Configuring fastfetch..."
+mkdir -p "$CONFIG/fastfetch"
+cat > "$CONFIG/fastfetch/config.jsonc" << 'EOF'
+{
+    "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
+    "display": { "color": { "keys": "green" }, "separator": " " },
+    "modules": [
+        "title", "separator",
+        "os", "kernel", "uptime", "packages", "shell",
+        "wm", "terminal", "font", "cpu", "memory"
+    ]
 }
-colors=(2 2 2 2 2 2)
-bold=true
-color_blocks=false
-bar_char_elapsed="-"
-bar_char_total="="
-bar_border=true
-bar_length=15
-cpu_temp=false
 EOF
 
-grep -q "neofetch" "$HOME/.bashrc" || echo -e "\nneofetch" >> "$HOME/.bashrc"
+grep -q "fastfetch" "$HOME/.bashrc" || echo -e "\nfastfetch" >> "$HOME/.bashrc"
 
 # ─── 12. LIGHTDM GREETER ───────────────────────────────────────────────────────
 info "Ricing LightDM greeter..."

@@ -1,12 +1,21 @@
 #!/bin/bash
-# configure calamares installer with darbs branding
+# configure calamares with darbs branding — fault tolerant
 
-set -e
+ok()   { echo "[OK]   $1"; }
+skip() { echo "[SKIP] $1 -- $2"; }
+
+try() {
+    local desc="$1"; shift
+    if ( set -e; "$@" ) 2>/dev/null; then
+        ok "$desc"
+    else
+        skip "$desc" "failed, continuing"
+    fi
+}
 
 BRAND_DIR="/etc/calamares/branding/darbs"
 mkdir -p "$BRAND_DIR"
 
-# branding.desc
 cat > "$BRAND_DIR/branding.desc" << 'EOF'
 componentName: darbs
 
@@ -38,18 +47,25 @@ style:
     sidebarTextSelect:    "#a7c080"
     sidebarTextHighlight: "#a7c080"
 EOF
+ok "calamares branding.desc written"
 
-# use Calamares default images as fallback
-cp /usr/share/calamares/branding/default/logo.png      "$BRAND_DIR/" 2>/dev/null || true
-cp /usr/share/calamares/branding/default/languages.png "$BRAND_DIR/" 2>/dev/null || true
-cp /usr/share/calamares/branding/default/show.qml      "$BRAND_DIR/" 2>/dev/null || true
+# copy default images as fallback
+for img in logo.png languages.png show.qml; do
+    src="/usr/share/calamares/branding/default/$img"
+    [ -f "$src" ] && cp "$src" "$BRAND_DIR/" 2>/dev/null || true
+done
+ok "calamares branding images copied"
 
-# point calamares settings to darbs branding
+# point settings.conf to darbs branding
 if [ -f /etc/calamares/settings.conf ]; then
-    sed -i 's/branding:.*/branding: darbs/' /etc/calamares/settings.conf
+    sed -i 's/branding:.*/branding: darbs/' /etc/calamares/settings.conf \
+        2>/dev/null && ok "calamares settings.conf patched" \
+        || skip "calamares settings.conf patch" "sed failed"
+else
+    skip "calamares settings.conf" "file not found"
 fi
 
-# create a desktop launcher for calamares on the live desktop
+# install desktop launcher
 mkdir -p /home/darbs/Desktop
 cat > /home/darbs/Desktop/install.desktop << 'EOF'
 [Desktop Entry]
@@ -62,5 +78,9 @@ Icon=calamares
 Terminal=false
 Categories=System;
 EOF
-chmod +x /home/darbs/Desktop/install.desktop
-chown darbs:darbs /home/darbs/Desktop/install.desktop
+chmod +x /home/darbs/Desktop/install.desktop 2>/dev/null || true
+chown darbs:darbs /home/darbs/Desktop/install.desktop 2>/dev/null || true
+ok "install desktop launcher created"
+
+echo ""
+echo "=== calamares setup complete ==="

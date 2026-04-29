@@ -1,0 +1,67 @@
+#!/bin/bash
+# download all wallpapers from cyberdiary2/dotfiles and set as desktop background
+
+ok()   { echo "[OK]   $1"; }
+skip() { echo "[SKIP] $1 -- $2"; }
+
+WALL_DIR="/usr/share/backgrounds/darbs"
+mkdir -p "$WALL_DIR"
+
+BASE="https://raw.githubusercontent.com/cyberdiary2/dotfiles/main/wallpapers"
+WALLS=(0001 0002 0003 0005 0006 0007 0008 0010 0014 0016 0017 0018 0019 0020
+       0021 0022 0023 0024 0025 0026 0028 0031 0032 0036 0038 0039 0040 0041
+       0042 0044 0045 0046 0051 0052 0054 0055 0057 0066 0067 0069 0070 0073
+       0078 0112 0327)
+
+echo "--- downloading ${#WALLS[@]} wallpapers ---"
+DOWNLOADED=0
+for w in "${WALLS[@]}"; do
+    dest="$WALL_DIR/${w}.jpg"
+    curl -sL "$BASE/${w}.jpg" -o "$dest" 2>/dev/null && \
+        DOWNLOADED=$((DOWNLOADED + 1)) || \
+        rm -f "$dest" 2>/dev/null
+done
+ok "downloaded $DOWNLOADED / ${#WALLS[@]} wallpapers to $WALL_DIR"
+
+# also copy first wallpaper to the everforest greeter path
+FIRST="$WALL_DIR/0001.jpg"
+if [ -f "$FIRST" ]; then
+    mkdir -p /usr/share/backgrounds/everforest
+    cp "$FIRST" /usr/share/backgrounds/everforest/greeter.jpg
+    ok "greeter wallpaper set"
+else
+    skip "greeter wallpaper" "0001.jpg not downloaded"
+fi
+
+# set desktop wallpaper for darbs user via xfce4 config
+XFCE_DESKTOP="/home/darbs/.config/xfce4/xfconf/xfce-perchannel-xml"
+mkdir -p "$XFCE_DESKTOP"
+
+cat > "$XFCE_DESKTOP/xfce4-desktop.xml" << EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<channel name="xfce4-desktop" version="1.0">
+  <property name="backdrop" type="empty">
+    <property name="screen0" type="empty">
+      <property name="monitorLVDS-1" type="empty">
+        <property name="workspace0" type="empty">
+          <property name="color-style"    type="int"    value="0"/>
+          <property name="image-style"    type="int"    value="5"/>
+          <property name="last-image"     type="string" value="$FIRST"/>
+        </property>
+      </property>
+      <property name="monitorLVDS1" type="empty">
+        <property name="workspace0" type="empty">
+          <property name="color-style"    type="int"    value="0"/>
+          <property name="image-style"    type="int"    value="5"/>
+          <property name="last-image"     type="string" value="$FIRST"/>
+        </property>
+      </property>
+    </property>
+  </property>
+</channel>
+EOF
+chown -R darbs:darbs /home/darbs/.config 2>/dev/null || true
+ok "xfce4 desktop wallpaper config written"
+
+echo ""
+echo "=== wallpapers complete ==="

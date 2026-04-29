@@ -1,69 +1,135 @@
 #!/bin/bash
-# install tools that need more than apt: nuclei latest, burp suite community,
-# chisel, ligolo-ng, pwncat, evil-winrm, etc.
+# special installs from GitHub releases — fault tolerant, skips on failure
 
-set -e
+ok()   { echo "[OK]   $1"; }
+skip() { echo "[SKIP] $1 -- $2"; }
 
-# ── Nuclei (latest binary from GitHub) ────────────────────────────────────────
-echo "installing nuclei..."
-NUCLEI_VER=$(curl -s https://api.github.com/repos/projectdiscovery/nuclei/releases/latest \
-    | grep '"tag_name"' | cut -d'"' -f4)
-curl -sL "https://github.com/projectdiscovery/nuclei/releases/download/${NUCLEI_VER}/nuclei_${NUCLEI_VER#v}_linux_amd64.zip" \
-    -o /tmp/nuclei.zip
-unzip -q /tmp/nuclei.zip -d /tmp/nuclei
-install -m 755 /tmp/nuclei/nuclei /usr/local/bin/nuclei
-rm -rf /tmp/nuclei /tmp/nuclei.zip
+try() {
+    local desc="$1"; shift
+    if ( set -e; "$@" ) 2>/dev/null; then
+        ok "$desc"
+    else
+        skip "$desc" "failed, continuing"
+    fi
+}
 
-# ── Chisel (fast TCP/UDP tunnel) ──────────────────────────────────────────────
-echo "installing chisel..."
-CHISEL_VER=$(curl -s https://api.github.com/repos/jpillora/chisel/releases/latest \
-    | grep '"tag_name"' | cut -d'"' -f4)
-curl -sL "https://github.com/jpillora/chisel/releases/download/${CHISEL_VER}/chisel_${CHISEL_VER#v}_linux_amd64.gz" \
-    -o /tmp/chisel.gz
-gunzip /tmp/chisel.gz
-install -m 755 /tmp/chisel /usr/local/bin/chisel
-rm -f /tmp/chisel
+gh_latest() {
+    curl -s "https://api.github.com/repos/$1/releases/latest" \
+        | grep '"tag_name"' | head -1 | cut -d'"' -f4
+}
 
-# ── Ligolo-ng (tunneling agent + proxy) ───────────────────────────────────────
-echo "installing ligolo-ng..."
-LIGOLO_VER=$(curl -s https://api.github.com/repos/nicocha30/ligolo-ng/releases/latest \
-    | grep '"tag_name"' | cut -d'"' -f4)
-curl -sL "https://github.com/nicocha30/ligolo-ng/releases/download/${LIGOLO_VER}/ligolo-ng_agent_${LIGOLO_VER#v}_linux_amd64.tar.gz" \
-    -o /tmp/ligolo-agent.tar.gz
-curl -sL "https://github.com/nicocha30/ligolo-ng/releases/download/${LIGOLO_VER}/ligolo-ng_proxy_${LIGOLO_VER#v}_linux_amd64.tar.gz" \
-    -o /tmp/ligolo-proxy.tar.gz
-tar -xzf /tmp/ligolo-agent.tar.gz -C /tmp
-tar -xzf /tmp/ligolo-proxy.tar.gz -C /tmp
-install -m 755 /tmp/agent /usr/local/bin/ligolo-agent
-install -m 755 /tmp/proxy /usr/local/bin/ligolo-proxy
-rm -f /tmp/ligolo-*.tar.gz /tmp/agent /tmp/proxy
+# ── Nuclei ────────────────────────────────────────────────────────────────────
+echo "--- nuclei ---"
+(
+    VER=$(gh_latest projectdiscovery/nuclei)
+    curl -sL "https://github.com/projectdiscovery/nuclei/releases/download/${VER}/nuclei_${VER#v}_linux_amd64.zip" \
+        -o /tmp/nuclei.zip
+    unzip -q /tmp/nuclei.zip -d /tmp/nuclei
+    install -m 755 /tmp/nuclei/nuclei /usr/local/bin/nuclei
+    rm -rf /tmp/nuclei /tmp/nuclei.zip
+) && ok "nuclei" || skip "nuclei" "download/install failed"
 
-# ── pwncat-cs (post-exploitation framework) ───────────────────────────────────
-echo "installing pwncat-cs..."
-pip3 install pwncat-cs --quiet 2>/dev/null || true
+# ── Chisel ────────────────────────────────────────────────────────────────────
+echo "--- chisel ---"
+(
+    VER=$(gh_latest jpillora/chisel)
+    curl -sL "https://github.com/jpillora/chisel/releases/download/${VER}/chisel_${VER#v}_linux_amd64.gz" \
+        -o /tmp/chisel.gz
+    gunzip /tmp/chisel.gz
+    install -m 755 /tmp/chisel /usr/local/bin/chisel
+    rm -f /tmp/chisel
+) && ok "chisel" || skip "chisel" "download/install failed"
+
+# ── Ligolo-ng ─────────────────────────────────────────────────────────────────
+echo "--- ligolo-ng ---"
+(
+    VER=$(gh_latest nicocha30/ligolo-ng)
+    curl -sL "https://github.com/nicocha30/ligolo-ng/releases/download/${VER}/ligolo-ng_agent_${VER#v}_linux_amd64.tar.gz" \
+        -o /tmp/ligolo-agent.tar.gz
+    curl -sL "https://github.com/nicocha30/ligolo-ng/releases/download/${VER}/ligolo-ng_proxy_${VER#v}_linux_amd64.tar.gz" \
+        -o /tmp/ligolo-proxy.tar.gz
+    tar -xzf /tmp/ligolo-agent.tar.gz -C /tmp
+    tar -xzf /tmp/ligolo-proxy.tar.gz -C /tmp
+    install -m 755 /tmp/agent /usr/local/bin/ligolo-agent
+    install -m 755 /tmp/proxy /usr/local/bin/ligolo-proxy
+    rm -f /tmp/ligolo-*.tar.gz /tmp/agent /tmp/proxy
+) && ok "ligolo-ng" || skip "ligolo-ng" "download/install failed"
+
+# ── pwncat-cs ─────────────────────────────────────────────────────────────────
+echo "--- pwncat-cs ---"
+pip3 install pwncat-cs --quiet 2>/dev/null \
+    && ok "pwncat-cs" || skip "pwncat-cs" "pip install failed"
 
 # ── evil-winrm ────────────────────────────────────────────────────────────────
-echo "installing evil-winrm..."
-gem install evil-winrm --quiet 2>/dev/null || true
+echo "--- evil-winrm ---"
+gem install evil-winrm --quiet 2>/dev/null \
+    && ok "evil-winrm" || skip "evil-winrm" "gem install failed"
 
-# ── Caido (modern Burp alternative, free tier) ────────────────────────────────
-echo "installing Caido..."
-CAIDO_VER=$(curl -s https://api.github.com/repos/caido/caido/releases/latest \
-    | grep '"tag_name"' | cut -d'"' -f4 || echo "")
-if [ -n "$CAIDO_VER" ]; then
-    curl -sL "https://github.com/caido/caido/releases/download/${CAIDO_VER}/caido-cli-${CAIDO_VER#v}-linux-x86_64.tar.gz" \
-        -o /tmp/caido.tar.gz 2>/dev/null || true
-    if [ -f /tmp/caido.tar.gz ]; then
-        tar -xzf /tmp/caido.tar.gz -C /tmp
-        find /tmp -name "caido*" -type f -exec install -m 755 {} /usr/local/bin/caido \; 2>/dev/null || true
-        rm -f /tmp/caido.tar.gz
+# ── Caido ─────────────────────────────────────────────────────────────────────
+echo "--- caido ---"
+(
+    VER=$(gh_latest caido/caido)
+    [ -z "$VER" ] && exit 1
+    curl -sL "https://github.com/caido/caido/releases/download/${VER}/caido-cli-${VER#v}-linux-x86_64.tar.gz" \
+        -o /tmp/caido.tar.gz
+    tar -xzf /tmp/caido.tar.gz -C /tmp
+    find /tmp -maxdepth 2 -name "caido*" -type f \
+        -exec install -m 755 {} /usr/local/bin/caido \;
+    rm -f /tmp/caido.tar.gz
+) && ok "caido" || skip "caido" "download/install failed"
+
+# ── Obsidian ──────────────────────────────────────────────────────────────────
+echo "--- obsidian ---"
+(
+    VER=$(gh_latest obsidianmd/obsidian-releases)
+    curl -sL "https://github.com/obsidianmd/obsidian-releases/releases/download/${VER}/obsidian_${VER#v}_amd64.deb" \
+        -o /tmp/obsidian.deb
+    dpkg -i /tmp/obsidian.deb
+    apt-get install -f -y
+    rm -f /tmp/obsidian.deb
+) && ok "obsidian" || skip "obsidian" "download/install failed"
+
+# ── Joplin ────────────────────────────────────────────────────────────────────
+echo "--- joplin ---"
+(
+    VER=$(gh_latest laurent22/joplin)
+    # try .deb first
+    curl -sL "https://github.com/laurent22/joplin/releases/download/${VER}/Joplin-${VER#v}.deb" \
+        -o /tmp/joplin.deb 2>/dev/null
+    if [ ! -s /tmp/joplin.deb ]; then
+        curl -sL "https://github.com/laurent22/joplin/releases/download/${VER}/joplin_${VER#v}_amd64.deb" \
+            -o /tmp/joplin.deb 2>/dev/null
     fi
-fi
+    if [ -s /tmp/joplin.deb ]; then
+        dpkg -i /tmp/joplin.deb
+        apt-get install -f -y
+        rm -f /tmp/joplin.deb
+    else
+        # AppImage fallback
+        mkdir -p /opt/joplin
+        curl -sL "https://github.com/laurent22/joplin/releases/download/${VER}/Joplin-${VER#v}.AppImage" \
+            -o /opt/joplin/Joplin.AppImage
+        chmod +x /opt/joplin/Joplin.AppImage
+        ln -sf /opt/joplin/Joplin.AppImage /usr/local/bin/joplin-desktop
+        cat > /usr/share/applications/joplin.desktop << 'DEOF'
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Joplin
+Comment=Note taking and to-do application
+Exec=/opt/joplin/Joplin.AppImage --no-sandbox %u
+Icon=joplin
+Terminal=false
+Categories=Office;Notes;
+MimeType=x-scheme-handler/joplin;
+DEOF
+    fi
+) && ok "joplin" || skip "joplin" "download/install failed"
 
-# ── desktop entries for tools that lack them ──────────────────────────────────
+# ── desktop entries for tools without them ────────────────────────────────────
 mkdir -p /usr/share/applications
 
-cat > /usr/share/applications/anonsurf.desktop << 'EOF'
+command -v anonsurf &>/dev/null && cat > /usr/share/applications/anonsurf.desktop << 'EOF'
 [Desktop Entry]
 Version=1.0
 Type=Application
@@ -75,7 +141,7 @@ Terminal=false
 Categories=Network;Security;
 EOF
 
-cat > /usr/share/applications/codium.desktop << 'EOF'
+command -v codium &>/dev/null && cat > /usr/share/applications/codium.desktop << 'EOF'
 [Desktop Entry]
 Version=1.0
 Type=Application
@@ -88,47 +154,5 @@ MimeType=text/plain;
 Categories=TextEditor;Development;IDE;
 EOF
 
-# ── Obsidian ──────────────────────────────────────────────────────────────────
-echo "installing Obsidian..."
-OBSIDIAN_VER=$(curl -s https://api.github.com/repos/obsidianmd/obsidian-releases/releases/latest \
-    | grep '"tag_name"' | cut -d'"' -f4)
-curl -sL "https://github.com/obsidianmd/obsidian-releases/releases/download/${OBSIDIAN_VER}/obsidian_${OBSIDIAN_VER#v}_amd64.deb" \
-    -o /tmp/obsidian.deb
-dpkg -i /tmp/obsidian.deb || apt-get install -f -y
-rm -f /tmp/obsidian.deb
-
-# ── Joplin ────────────────────────────────────────────────────────────────────
-echo "installing Joplin..."
-JOPLIN_VER=$(curl -s https://api.github.com/repos/laurent22/joplin/releases/latest \
-    | grep '"tag_name"' | grep -v 'android\|ios\|cli' | head -1 | cut -d'"' -f4)
-# Joplin desktop releases are tagged as v2.x.x (no suffix)
-curl -sL "https://github.com/laurent22/joplin/releases/download/${JOPLIN_VER}/Joplin-${JOPLIN_VER#v}.deb" \
-    -o /tmp/joplin.deb 2>/dev/null || \
-curl -sL "https://github.com/laurent22/joplin/releases/download/${JOPLIN_VER}/joplin_${JOPLIN_VER#v}_amd64.deb" \
-    -o /tmp/joplin.deb 2>/dev/null || true
-if [ -f /tmp/joplin.deb ] && [ -s /tmp/joplin.deb ]; then
-    dpkg -i /tmp/joplin.deb || apt-get install -f -y
-    rm -f /tmp/joplin.deb
-else
-    # fallback: install via AppImage and wrap it
-    mkdir -p /opt/joplin
-    curl -sL "https://github.com/laurent22/joplin/releases/download/${JOPLIN_VER}/Joplin-${JOPLIN_VER#v}.AppImage" \
-        -o /opt/joplin/Joplin.AppImage || true
-    chmod +x /opt/joplin/Joplin.AppImage 2>/dev/null || true
-    ln -sf /opt/joplin/Joplin.AppImage /usr/local/bin/joplin-desktop 2>/dev/null || true
-
-    cat > /usr/share/applications/joplin.desktop << 'DEOF'
-[Desktop Entry]
-Version=1.0
-Type=Application
-Name=Joplin
-Comment=Note taking and to-do application
-Exec=/opt/joplin/Joplin.AppImage --no-sandbox %u
-Icon=joplin
-Terminal=false
-Categories=Office;Notes;
-MimeType=x-scheme-handler/joplin;
-DEOF
-fi
-
-echo "special installs done."
+echo ""
+echo "=== special installs complete ==="

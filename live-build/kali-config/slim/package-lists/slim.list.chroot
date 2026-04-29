@@ -1,5 +1,8 @@
 kali-linux-core
 kali-desktop-xfce
+xserver-xorg-input-all
+xserver-xorg-input-evdev
+xserver-xorg-input-libinput
 lightdm
 lightdm-gtk-greeter
 calamares

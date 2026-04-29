@@ -27,7 +27,7 @@ lb config noauto \
     --architectures amd64 \
     --archive-areas "main contrib non-free non-free-firmware" \
     --binary-images iso-hybrid \
-    --bootappend-live "boot=live components username=darbs hostname=darbs i8042.reset i8042.nomux i8042.nopnp i8042.noloop" \
+    --bootappend-live "boot=live components username=darbs hostname=darbs" \
     --bootloaders grub-efi \
     --checksums sha256 \
     --debian-installer none \

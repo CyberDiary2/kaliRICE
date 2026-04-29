@@ -238,54 +238,9 @@ panel-position=top
 EOF
 ok "LightDM greeter configured"
 
-# ── 12. PLYMOUTH (DARBS IBM VGA LOGO) ─────────────────────────────────────────
-info "Installing DARBS Plymouth theme..."
-PLYMOUTH_DIR="/usr/share/plymouth/themes/darbs"
-sudo mkdir -p "$PLYMOUTH_DIR"
-
-sudo bash -c "cat > $PLYMOUTH_DIR/darbs.plymouth" << 'EOF'
-[Plymouth Theme]
-Name=darbs
-Description=Minimal dark retro boot theme
-ModuleName=script
-
-[script]
-ImageDir=/usr/share/plymouth/themes/darbs
-ScriptFile=/usr/share/plymouth/themes/darbs/darbs.script
-EOF
-
-sudo bash -c "cat > $PLYMOUTH_DIR/darbs.script" << 'EOF'
-Window.SetBackgroundTopColor(0, 0, 0);
-Window.SetBackgroundBottomColor(0, 0, 0);
-logo_image = Image("logo.png");
-logo_sprite = Sprite(logo_image);
-logo_sprite.SetX(Window.GetWidth()  / 2 - logo_image.GetWidth()  / 2);
-logo_sprite.SetY(Window.GetHeight() / 2 - logo_image.GetHeight() / 2 - 60);
-bar_bg = Rectangle(0, Window.GetHeight() - 10, Window.GetWidth(), 8);
-bar_bg.SetFillColor(0.1, 0.1, 0.1, 1);
-bar = Rectangle(0, Window.GetHeight() - 10, 1, 8);
-bar.SetFillColor(0.2, 1.0, 0.2, 1);
-fun progress_callback(duration, progress) {
-    bar.SetWidth(Window.GetWidth() * progress);
-}
-Plymouth.SetBootProgressFunction(progress_callback);
-fun password_callback(prompt, bullets) {
-    msg = Sprite();
-    msg.SetPosition(Window.GetWidth() / 2 - 200, Window.GetHeight() / 2 + 40, 10000);
-    msg.SetImage(Image.Text(prompt, 0.2, 1.0, 0.2, 1));
-}
-Plymouth.SetDisplayPasswordFunction(password_callback);
-EOF
-
-# generate DARBS logo: render small, upscale for chunky VGA pixel look
-sudo convert -size 150x50 xc:"#000000" \
-    -font /usr/share/fonts/opentype/unifont/unifont.otf \
-    -pointsize 24 -fill "#33FF33" -gravity Center -annotate 0 "DARBS" \
-    -filter point -resize 600x200 \
-    "$PLYMOUTH_DIR/logo.png" 2>/dev/null && ok "DARBS logo generated" || \
-    skip "DARBS logo" "imagemagick/unifont issue"
-
-try "set plymouth theme" sudo plymouth-set-default-theme darbs
+# ── 12. PLYMOUTH ───────────────────────────────────────────────────────────────
+info "Setting Plymouth to spinner (safe for LUKS encryption)..."
+try "set plymouth spinner" sudo plymouth-set-default-theme spinner
 try "update initramfs" sudo update-initramfs -u
 
 # ── 13. GRUB ───────────────────────────────────────────────────────────────────
